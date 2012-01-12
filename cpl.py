@@ -39,31 +39,32 @@ class Lexer:
                 self.col += 1
                 self.stream_pos += 1
 
-    def skip_comment(self, comment_depth = 0):
-            if self.source[self.stream_pos:].startswith("/*"):
-                comment_depth += 1
-                self.stream_pos += 2
-                self.col += 2
-                while not self.source[self.stream_pos:].startswith("*/") and self.stream_pos < len(self.source):
-                    if self.source[self.stream_pos:].startswith("/*"):
-                        self.skip_comment(comment_depth)
-                    elif self.source[self.stream_pos] == "\n":
-                        self.stream_pos += 1
-                        self.col = 0
-                        self.line += 1
-                    else:
-                        self.stream_pos += 1
-                        self.col += 1
+    def skip_comment(self):
+        if self.source[self.stream_pos:].startswith("/*"):
+            self.stream_pos += 2
+            self.col += 2
+            while not self.source[self.stream_pos:].startswith("*/") and self.stream_pos < len(self.source):
+                if self.source[self.stream_pos:].startswith("/*"):
+                    self.skip_comment()
+                elif self.source[self.stream_pos] == "\n":
+                    self.stream_pos += 1
+                    self.col = 0
+                    self.line += 1
+                else:
+                    self.stream_pos += 1
+                    self.col += 1
 
-                if self.source[self.stream_pos:].startswith("*/"):
-                        self.stream_pos += 2
-                        self.col += 2
-                        return
+            if self.source[self.stream_pos:].startswith("*/"):
+                    self.stream_pos += 2
+                    self.col += 2
 
     def peek(self):
-        self.skip_whitespace()
-        self.skip_comment()
-        self.skip_whitespace()
+        while True:
+            old_stream_pos = self.stream_pos
+            self.skip_whitespace()
+            self.skip_comment()
+            if old_stream_pos == self.stream_pos:
+                break
 
         if self.stream_pos == len(self.source):
             return Token("eof", "", self.line, self.col)
@@ -622,6 +623,8 @@ class Parser:
             if typ[0].lexeme != ast.get_ret_type():
                 raise SyntaxError("%d:%d error: argument %d requires type %s" % (fun_tok.line, fun_tok.col, i, typ[0].lexeme))
 
+        if not self.symbol_table.find_entry_by_id(fun_tok.lexeme):
+            raise SyntaxError("%d:%d error: unknown symbol %s" % (fun_tok.line, fun_tok.col, fun_tok.lexeme))
         return FuncCallAST(fun_tok.lexeme, arg_asts, self.symbol_table)
 
     def parse_expr(self):
@@ -711,9 +714,14 @@ class Parser:
             if dec_tok.typ == "(":
                 return self.parse_fun_call(tok)
             else:
+                if not self.symbol_table.find_entry_by_id(tok.lexeme):
+                    raise SyntaxError("%d:%d error: unknown symbol %s" % (tok.line, tok.col,
+                                                                          rhs.get_ret_type()))
                 return VarRefAST(tok.lexeme, self.symbol_table)
 
     def parse_assignment(self, id_tok):
+        if not self.symbol_table.find_entry_by_id(id_tok.lexeme):
+            raise SyntaxError("%d:%d error: unknown symbol %s" % (id_tok.line, id_tok.col, id_tok.lexeme))
         lhs = VarRefAST(id_tok.lexeme, self.symbol_table)
         self.fetch_token(":=")
         rhs = self.parse_expr()
@@ -773,44 +781,18 @@ class Parser:
             print(src_lines[e[0]], file=sys.stderr)
             print(e[2].msg)
 
-p = Parser(Lexer("""int foo, bar, moo;
-                    bool boo;
-                    int func(int arg1) {
-                        int local1; bool b2, b3;
+def main():
+    sys.argv.append("test5.co")
+    if len(sys.argv) > 1:
+        with open(sys.argv[1]) as f:
+            source = f.read()
+    else:
+        source = ""
+        for line in sys.stdin:
+            source = "%s%s\n" % (source, line)
+    p = Parser(Lexer(source))
+    p.parse()
+    print(p.root_block)
+    p.print_errors()
 
-                        return 5;
-                    }
-/* /* foo / */ // * */
-                    int func2() {
-                        int bar; bool b;
-                        b := bar < bar;
-                        { int bar; bar := 0 + (2+(2*2)*5);}
-
-                        return 6
-
-                        if (true) then
-                            return bar + 3;
-                        else
-                            { while (bar > 0) {
-                                bar := bar - 1;
-                                b := not b;
-                              }
-                              if (true) then
-                                  return 5;
-                              else
-                                  return 6;
-                              fi
-                              return 2 + (2*2);
-                            }
-                        fi
-                    }
-
-                    bool func34567890123() {return true;}
-
-                    bool bfunc(bool b)
-                    {
-                        return not boo and b;
-                    }"""))
-p.parse()
-print(p.root_block)
-p.print_errors()
+main()

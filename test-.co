@@ -1,12 +1,5 @@
 
 
-    //int id() { if (i) then a := b; fi }
-
-//int id(){ bo := b1 and (b2 or b3) and b2; return a; }
-
-//int id(){ id := id and (id or id) and id; return id; }
-
-
 /* CPL Testprogramm 1 */
 
 int a, b, c, zulangerbezeichner;

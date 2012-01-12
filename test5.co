@@ -1,0 +1,39 @@
+/* /*CPL Testprogramm 1 */*/
+
+int a, b, c, zulangerbezeichner;
+bool b1, b2, b3;
+int d;  bool b4;
+
+
+int xor (bool in1, int in2) {
+ 	/* einfache XOR berechnung */
+ 	
+ 	if (not in1 and not in2) then return 0; fi
+	if (in1 and not in2) then return 1; fi
+	if (not in1 and in2) then return 1; fi
+	if (in1 and in2) then return 0;	 fi
+}
+
+bool empty()    {
+
+}
+
+
+int main () {
+	
+	int result, res2;
+	
+	result := xor(true, false);
+	xor(false, false);
+	
+	a := 1;
+	b := 12;
+	res2 := a + b;
+	
+	c := a;
+	a := b;
+	b  := c;	
+	
+}
+
+

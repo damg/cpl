@@ -1,0 +1,68 @@
+/* CPL Testprogramm 2 */
+
+int a, b, c, zulangerbezeichner;
+bool b1, b2, b3;
+
+
+int foo (int a, int b) {
+ /* berechnet a * b mittels Addition - /* Annahme: a > 0 */ */
+ 
+	int i, sum;
+	bool bo;
+	
+	sum := 0;
+	i := a;
+	
+	while (i = -8) {
+		sum := b + b;
+		i := i+-1;
+	}
+	
+	bo := true or false;
+	
+	bo := b1 or  b2;
+	
+	bo := b1 and (b2 or b3) and b2;
+	
+	/*bo := -bo;*/
+	bo := not bo;
+
+	
+	i := -(i+sum);
+	
+	return i*4+9*3/-(i+sum);  
+	
+	i := i*4+9*3*-(i+sum);
+}
+
+
+int main () {
+
+int a, b, c;
+bool bb;
+	
+	a := 5;
+	b := 10;
+	
+	
+	if (true) then	a := b;	fi
+	
+		
+	c := foo(a, bb);
+
+	c := foo(a);
+	
+	c := foo(a, bb, c, a, a);
+	
+	a := a * b + c * a + b * b;
+	
+	printint(bb);
+	
+	a := a+1;
+	
+	if (a < b) then	a := b; fi
+	
+	return a;
+}
+
+

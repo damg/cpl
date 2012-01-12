@@ -28,7 +28,7 @@ class Lexer:
 
         self.stream_pos = 0
 
-    def peek(self):
+    def skip_whitespace(self):
         while self.stream_pos < len(self.source) and \
                 self.source[self.stream_pos] in [" ", "\t", "\r", "\n"]:
             if self.source[self.stream_pos] == "\n":
@@ -38,6 +38,32 @@ class Lexer:
             else:
                 self.col += 1
                 self.stream_pos += 1
+
+    def skip_comment(self, comment_depth = 0):
+            if self.source[self.stream_pos:].startswith("/*"):
+                comment_depth += 1
+                self.stream_pos += 2
+                self.col += 2
+                while not self.source[self.stream_pos:].startswith("*/") and self.stream_pos < len(self.source):
+                    if self.source[self.stream_pos:].startswith("/*"):
+                        self.skip_comment(comment_depth)
+                    elif self.source[self.stream_pos] == "\n":
+                        self.stream_pos += 1
+                        self.col = 0
+                        self.line += 1
+                    else:
+                        self.stream_pos += 1
+                        self.col += 1
+
+                if self.source[self.stream_pos:].startswith("*/"):
+                        self.stream_pos += 2
+                        self.col += 2
+                        return
+
+    def peek(self):
+        self.skip_whitespace()
+        self.skip_comment()
+        self.skip_whitespace()
 
         if self.stream_pos == len(self.source):
             return Token("eof", "", self.line, self.col)
@@ -747,14 +773,14 @@ class Parser:
             print(src_lines[e[0]], file=sys.stderr)
             print(e[2].msg)
 
-p = Parser(Lexer("""int foo, bar, moo,
+p = Parser(Lexer("""int foo, bar, moo;
                     bool boo;
                     int func(int arg1) {
                         int local1; bool b2, b3;
 
                         return 5;
                     }
-
+/* /* foo / */ // * */
                     int func2() {
                         int bar; bool b;
                         b := bar < bar;

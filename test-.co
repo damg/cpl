@@ -1,0 +1,75 @@
+
+
+    //int id() { if (i) then a := b; fi }
+
+//int id(){ bo := b1 and (b2 or b3) and b2; return a; }
+
+//int id(){ id := id and (id or id) and id; return id; }
+
+
+/* CPL Testprogramm 1 */
+
+int a, b, c, zulangerbezeichner;
+bool b1, b2, b3;
+
+
+bool foo (int a, int b) {
+  /* berechnet a * b mittels Addition - /* Annahme: a > 0 */ */
+int i, sum;
+	bool bo;
+	bool bo;  // doppelt
+	
+		i := i--1;
+	
+	sum := true;
+	i := a;
+	
+	while (sum <= a) {
+		sum := b + b;
+		sum := 1;
+		i := i--1;
+	}
+	
+	bo := true or false;
+	
+	bo := b1    or     b2;
+	
+	bo := b1 and (b2 or b3) and b2;
+	
+	bo := not bo;
+	
+	i := not sum;
+	i := -i;  
+	
+	return bo; 
+}
+
+
+int main () {
+	int a, b, c;
+	
+	a := 5;
+	b := 10;
+	
+	if (true) a := b; fi;
+	//if (i) then a := b; fi
+		
+	c := foo(a, b);
+	
+	a := a * b + c * a + b * b;
+	
+	printi(c);
+	
+	//a := ;
+	a := 88;
+	
+	if (a < b)
+	then
+	//a := b; fi;
+	a := b; fi
+	
+	return a;
+}
+
+
+

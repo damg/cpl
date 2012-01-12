@@ -1,0 +1,48 @@
+/* /* /* /* CPL Testprogramm */ mit 
+	extrem geschach- */
+telten ++++++ Kommentaren ++++++
+/* noch einer weils so schoen war */
+	*/ 			                                      */
+
+int a,b,c,d,e,f,g,undjetztnochganzlang;
+bool h,i,j,k,l;
+
+int ersterTest(int param1, bool param2, int param3) {
+	if(-param1 - -param3 = 42) then
+		if(true or not false) then
+			return 21;
+		else 
+			return 42;
+		fi
+	fi
+	
+	/* Kleiner Kommentar am Rande
+	*
+	*
+	*/
+	
+	while(param1 < param3) {
+		a := 1;
+		b := 2;
+		c := 3;
+
+		d := -a + +b - -+-c;
+		param3 := param3 - +1;
+	}
+
+	functionCall(11);
+	return 0;
+}
+
+bool functionCall(int foo) 
+{
+	int i,j,k;
+	bool test;
+	
+	i := (100/(23*23))+12-+12*12/12;
+	test := (not (12 <= 13)) or (12 >= 13) and (not false != false);
+	test := true;
+
+	return test;
+}
+			

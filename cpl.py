@@ -10,7 +10,7 @@ class Token:
         assert(isinstance(lexeme, str))
         assert(isinstance(line, int))
         assert(isinstance(col, int))
-        
+
         self.typ = typ
         self.lexeme = lexeme
         self.line = line
@@ -73,7 +73,7 @@ class Lexer:
         if t.typ == "id" and len(t.lexeme) > 8:
             print("%d:%d warning: identifier %s exceeds length of 8 characters and will be truncated" % (t.line, t.col, t.lexeme), file=sys.stderr)
         t.lexeme = t.lexeme[:8]
-            
+
         return t
 
 class SymbolEntry:
@@ -181,7 +181,7 @@ class FuncCallAST:
 
     def get_ret_type(self):
         return self.ret_type
-            
+
 class VarRefAST:
     def __init__(self, var_name, symbol_table):
         self.var_name = var_name
@@ -242,7 +242,7 @@ class MathOpAST:
         self.op = op
         self.lhs_expr = lhs_expr
         self.rhs_expr = rhs_expr
-        
+
     def __str__(self):
         return "(%s %s %s)" % (self.op, str(self.lhs_expr), str(self.rhs_expr))
 
@@ -254,7 +254,7 @@ class BoolOpAST:
         self.op = op
         self.lhs_expr = lhs_expr
         self.rhs_expr = rhs_expr
-        
+
     def __str__(self):
         return "(%s %s %s)" % (self.op, str(self.lhs_expr), str(self.rhs_expr))
 
@@ -307,6 +307,16 @@ class WhileAST:
     def __str__(self):
         return "(while %s %s)" % (str(self.chk_ast), str(self.loop_ast))
 
+    def get_ret_type(self):
+        return None
+
+class NopAST:
+    def __str__(self):
+        return "(void)"
+
+    def get_ret_type(self):
+        return None
+
 class FuncDeclAST:
     def __init__(self, ret_typ, func_name, params, block):
         self.ret_typ = ret_typ
@@ -351,7 +361,7 @@ class FuncDeclAST:
     def check_return_paths(self, block = None):
         if not block:
             block = self.block
-        
+
         for expr in block.exprs:
             if isinstance(expr, ReturnAST):
                 return True
@@ -379,12 +389,16 @@ class Parser:
         self.lexer = lexer
         self.symbol_table = SymbolTable()
         self.root_block = BlockAST()
+        self.errors= []
 
     def assert_tok_types(self, tok, *types):
         assert(len(types) > 0)
         if tok.typ not in types:
-            expect_msg = "%s or %s" % (", ".join(types[1:]),
-                                       types[0])
+            if len(types) == 1:
+                expect_msg = "%s" % types[0]
+            else:
+                expect_msg = "%s or %s" % (", ".join(types[1:]),
+                                           types[0])
             raise SyntaxError("%d:%d error: Unexpected token '%s'. Expected %s." %
                               (tok.line, tok.col, tok.lexeme, expect_msg))
 
@@ -399,6 +413,12 @@ class Parser:
 
     def peek_token(self):
         return self.lexer.peek()
+
+    def sync(self, *sync_tokens):
+        assert(len(sync_tokens) != 0)
+        tok = self.fetch_token()
+        while tok.typ not in sync_tokens:
+            tok = self.fetch_token()
 
     def parse_program(self):
         type_tok = self.fetch_token("type")
@@ -430,7 +450,7 @@ class Parser:
             if self.peek_token().typ == ")":
                 func_ast.block = self.parse_block()
             else:
-                while True:               
+                while True:
                     typ_tok = self.fetch_token("type")
                     id_tok = self.fetch_token("id")
                     self.params.append((typ_tok, id_tok))
@@ -446,16 +466,23 @@ class Parser:
             try:
                 func_ast.check_return_types()
             except SyntaxError as e:
-                raise SyntaxError("%d:%d error: function %s expects %s type, but returning %s" % (e.args[0][1].line, e.args[0][1].col, func_tok.lexeme, type_tok.lexeme, e.args[0][0]))
+                self.errors.append((e.args[0][1].line, e.args[0][1].col,\
+                    SyntaxError("%d:%d error: function %s expects %s type, but returning %s" %
+                            (e.args[0][1].line, e.args[0][1].col, func_tok.lexeme, type_tok.lexeme, e.args[0][0]))))
             if not func_ast.check_return_paths():
-                raise SyntaxError("%d:%d error: not all paths in function %s return a value" % (func_tok.line, func_tok.col, func_tok.lexeme))
+                self.errors.append((func_tok.line, func_tok.col,
+                    SyntaxError("%d:%d error: not all paths in function %s return a value" % (func_tok.line, func_tok.col, func_tok.lexeme))))
             self.symbol_table.pop_frame()
             self.parse_program_func_decls()
-            
+
     def parse_program_func_decls(self):
         while self.peek_token().typ != "eof":
-            decl = self.parse_func_decl()
-            self.root_block.exprs.append(decl)
+            try:
+                decl = self.parse_func_decl()
+                self.root_block.exprs.append(decl)
+            except SyntaxError as e:
+                self.errors.append((self.lexer.line, self.lexer.col, e))
+                self.sync("eof", "}")
 
     def parse_func_decl(self):
         type_tok = self.fetch_token("type")
@@ -471,7 +498,7 @@ class Parser:
             self.fetch_token(")")
             func_ast.block = self.parse_block()
         else:
-            while True:               
+            while True:
                 typ_tok = self.fetch_token("type")
                 id_tok = self.fetch_token("id")
                 self.params.append((typ_tok, id_tok))
@@ -483,7 +510,6 @@ class Parser:
                 self.symbol_table.register(SymbolEntry(ttok.lexeme, itok))
                 func_ast.params.append((ttok.lexeme, itok.lexeme))
             func_ast.block = self.parse_block()
-            self.root_block.exprs.append(func_ast)
         try:
             func_ast.check_return_types()
         except SyntaxError as e:
@@ -492,23 +518,34 @@ class Parser:
             raise SyntaxError("%d:%d error: not all paths in function %s return a value" % (func_tok.line, func_tok.col, func_tok.lexeme))
         self.symbol_table.pop_frame()
         return func_ast
-            
+
+    def parse_var_decl_part(self, block_ast):
+        while self.peek_token().typ == "type":
+            try:
+                typ_tok = self.fetch_token("type")
+                id_tok = self.fetch_token("id")
+                id_toks = [id_tok]
+                while self.peek_token().typ != ";":
+                    self.fetch_token(",")
+                    id_toks.append(self.fetch_token("id"))
+                self.fetch_token(";")
+                for tok in id_toks:
+                    self.symbol_table.register(SymbolEntry(typ_tok.lexeme, tok))
+                    block_ast.exprs.append(VarDeclAST(typ_tok.lexeme, tok.lexeme))
+            except SyntaxError as e:
+                self.errors.append((self.lexer.line, self.lexer.col, e))
+                self.sync(";", "eof")
+
     def parse_block(self):
         ast = BlockAST()
         self.fetch_token("{")
-        while self.peek_token().typ == "type":
-            typ_tok = self.fetch_token("type")
-            id_tok = self.fetch_token("id")
-            id_toks = [id_tok]
-            while self.peek_token().typ != ";":
-                self.fetch_token(",")
-                id_toks.append(self.fetch_token("id"))
-            self.fetch_token(";")
-            for tok in id_toks:
-                self.symbol_table.register(SymbolEntry(typ_tok.lexeme, tok))
-                ast.exprs.append(VarDeclAST(typ_tok.lexeme, tok.lexeme))
+        self.parse_var_decl_part(ast)
         while self.peek_token().typ != "}":
-            ast.exprs.append(self.parse_stmt())
+            try:
+                ast.exprs.append(self.parse_stmt())
+            except SyntaxError as e:
+                self.errors.append((self.lexer.line, self.lexer.col, e))
+                self.sync(";", "}", "fi", "eof")
         self.fetch_token("}")
         return ast
 
@@ -551,10 +588,10 @@ class Parser:
                 if dec_token.typ == ")":
                     break
         self.fetch_token(";")
-        
+
         if len(sym.prototype) != len(arg_asts):
             raise SyntaxError("%d:%d error: function %s requires %d arguments, but %d are being passed." % (fun_tok.line, fun_tok.col, fun_tok.lexeme, len(sym.prototype), len(arg_asts)))
-        
+
         for typ, ast, i in zip(sym.prototype, arg_asts, range(len(arg_asts))):
             if typ[0].lexeme != ast.get_ret_type():
                 raise SyntaxError("%d:%d error: argument %d requires type %s" % (fun_tok.line, fun_tok.col, i, typ[0].lexeme))
@@ -617,7 +654,7 @@ class Parser:
                 return BoolOpAST(dec_tok.lexeme, lhs, rhs)
         else:
             return lhs
-        
+
     def parse_factor(self):
         tok = self.fetch_token("number", "boolconst",
                                "id", "(",
@@ -658,7 +695,7 @@ class Parser:
             raise SyntaxError("%d:%d error: attempting to assign %s typed expression to %s typed variable %s" % (id_tok.line, id_tok.col,
                                                                                                                  rhs.get_ret_type(), lhs.get_ret_type(),
                                                                                                                  id_tok.lexeme))
-        
+
         return AssignAST(id_tok.lexeme, rhs)
 
     def parse_struct_stmt(self):
@@ -691,8 +728,10 @@ class Parser:
         chk_ast = self.parse_expr()
         if chk_ast.get_ret_type() != "bool":
             raise SyntaxError("%d:%d error: if clause must be bool typed" % (tok.line, tok.col))
+
         tok = self.fetch_token(")")
         tok = self.fetch_token("then")
+
         then_ast = self.parse_stmt()
         dec_tok = self.fetch_token("fi", "else")
         if dec_tok.typ == "else":
@@ -702,7 +741,13 @@ class Parser:
         else:
             return IfAST(chk_ast, then_ast)
 
-p = Parser(Lexer("""int foo, bar, moo;
+    def print_errors(self):
+        src_lines = self.lexer.source.split("\n")
+        for e in self.errors:
+            print(src_lines[e[0]], file=sys.stderr)
+            print(e[2].msg)
+
+p = Parser(Lexer("""int foo, bar, moo,
                     bool boo;
                     int func(int arg1) {
                         int local1; bool b2, b3;
@@ -715,7 +760,7 @@ p = Parser(Lexer("""int foo, bar, moo;
                         b := bar < bar;
                         { int bar; bar := 0 + (2+(2*2)*5);}
 
-                        return 6;
+                        return 6
 
                         if (true) then
                             return bar + 3;
@@ -728,7 +773,7 @@ p = Parser(Lexer("""int foo, bar, moo;
                                   return 5;
                               else
                                   return 6;
-                        fi
+                              fi
                               return 2 + (2*2);
                             }
                         fi
@@ -742,3 +787,4 @@ p = Parser(Lexer("""int foo, bar, moo;
                     }"""))
 p.parse()
 print(p.root_block)
+p.print_errors()
